@@ -1,0 +1,153 @@
+﻿@page "/products"
+
+<PageTitle>Products</PageTitle>
+
+<h3>Products</h3>
+
+@using Inventory.Data.Database
+@using System.Diagnostics;
+@using Inventory.Data.Models;
+@inject DatabaseService DbService
+
+@inject IDialogService DialogService
+
+@inject ISnackbar SnackBar
+
+<MudButton @onclick="OpenAddDialog" Variant="Variant.Filled" Color="Color.Primary">Add product</MudButton>
+
+<MudDataGrid Items="@products">
+    <Columns>
+        <PropertyColumn Property="x => x.Name" Title ="Name"/>
+        <PropertyColumn Property="x => x.PartNumber" />
+        <PropertyColumn Property="x => x.SellPrice" Title="Sell Price"/>
+        <PropertyColumn Property="x => x.BuyPrice" Title="Buy Price"/>
+        <TemplateColumn CellClass="d-flex justify-end">
+            <CellTemplate>
+                <MudStack Row>
+                    <MudButton @onclick="() => OpenEditDialog(context.Item)" Size="@Size.Small" Variant="@Variant.Filled" Color="@Color.Primary">Edit</MudButton>
+                    <MudButton @onclick="() => OpenDeleteDialog(context.Item)" Size="@Size.Small" Variant="@Variant.Filled" Color="@Color.Error">Delete</MudButton>
+                </MudStack>
+            </CellTemplate>
+        </TemplateColumn>
+    </Columns>
+</MudDataGrid>
+
+@code
+{
+    List<Product> products = new();
+
+    public async Task LoadProducts()
+    {
+        var tmp = await DbService.SelectProducts();
+
+        if (tmp.error != null)
+        {
+            Debug.WriteLine(tmp.error);
+        }
+        else
+        {
+            products = tmp.products;
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadProducts();
+    }
+
+    private async void OpenAddDialog()
+    {
+        var options = new DialogOptions { CloseOnEscapeKey = true };
+        var tmp = DialogService.Show<AddProductDialog>("Add product", options);
+
+        var result = await tmp.Result;
+
+        if(!result.Canceled)
+        {
+            Product newProduct = (Product)result.Data;
+
+            var tmpinsert = await DbService.InsertProduct(newProduct);
+
+            if(!string.IsNullOrWhiteSpace(tmpinsert))
+            {
+                Debug.WriteLine(tmpinsert);
+
+                SnackBar.Add("Internal error.", Severity.Error);
+            }
+            else
+            {
+                SnackBar.Add("Product added.", Severity.Success);
+
+                await LoadProducts();
+
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+    }
+
+    private async void OpenDeleteDialog(Product ToDeleteProduct)
+    {
+        var options = new DialogOptions { CloseOnEscapeKey = true };
+
+        var parameters = new DialogParameters();
+        parameters.Add("ToDeleteProduct", ToDeleteProduct);
+
+        var tmp = DialogService.Show<DeleteProductDialog>("Delete product", parameters, options);
+
+        var result = await tmp.Result;
+
+        if (!result.Canceled)
+        {
+            var tmpdelete = await DbService.DeleteProduct(ToDeleteProduct.Id);
+
+            if (!string.IsNullOrWhiteSpace(tmpdelete))
+            {
+                Debug.WriteLine(tmpdelete);
+
+                SnackBar.Add("Internal error.", Severity.Error);
+            }
+            else
+            {
+                SnackBar.Add("Product deleted.", Severity.Success);
+
+                await LoadProducts();
+
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+    }
+
+    private async void OpenEditDialog(Product ToUpdateProduct)
+    {
+        var options = new DialogOptions { CloseOnEscapeKey = true };
+
+        var parameters = new DialogParameters();
+        parameters.Add("ToUpdateProduct", ToUpdateProduct);
+
+        var tmp = DialogService.Show<EditProductDialog>("Update product", parameters, options);
+
+        var result = await tmp.Result;
+
+        if (!result.Canceled)
+        {
+            Product newProduct = (Product)result.Data;
+
+            var tmpupdate = await DbService.UpdateProduct(newProduct);
+
+            if (!string.IsNullOrWhiteSpace(tmpupdate))
+            {
+                Debug.WriteLine(tmpupdate);
+
+                SnackBar.Add("Internal error.", Severity.Error);
+            }
+            else
+            {
+                SnackBar.Add("Product updated.", Severity.Success);
+
+                await LoadProducts();
+
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+    }
+}

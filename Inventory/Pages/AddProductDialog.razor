@@ -1,0 +1,67 @@
+﻿@using Inventory.Data.Models;
+
+<MudDialog>
+    <DialogContent>
+        <MudTextField @bind-Value="newProduct.Name" Label="Name" Variant="Variant.Text"></MudTextField>
+        <MudTextField @bind-Value="newProduct.PartNumber" Label="Part Number" Variant="Variant.Text"></MudTextField>
+        <MudNumericField HideSpinButtons="true" @bind-Value="newProduct.SellPrice" Label="Sell Price" Variant="Variant.Text" />
+        <MudNumericField HideSpinButtons="true" @bind-Value="newProduct.BuyPrice" Label="Buy Price" Variant="Variant.Text" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Submit">Ok</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@inject ISnackbar Snackbar
+
+@code
+{
+    [CascadingParameter] MudDialogInstance? MudDialog { get; set; }
+
+    Product newProduct = new();
+
+    void Cancel()
+    {
+        if(MudDialog != null)
+        {
+            MudDialog.Cancel();
+        }
+    }
+
+    void Submit()
+    {
+        if(string.IsNullOrWhiteSpace(newProduct.Name))
+        {
+            Snackbar.Add("Name missing.", Severity.Error);
+
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(newProduct.PartNumber))
+        {
+            Snackbar.Add("Part Number missing.", Severity.Error);
+
+            return;
+        }
+
+        if (newProduct.SellPrice <= 0)
+        {
+            Snackbar.Add("Sell Price missing.", Severity.Error);
+
+            return;
+        }
+
+        if (newProduct.BuyPrice <= 0)
+        {
+            Snackbar.Add("Buy Price missing.", Severity.Error);
+
+            return;
+        }
+
+        if(MudDialog != null)
+        {
+            MudDialog.Close(DialogResult.Ok(newProduct));
+        }
+    }
+}

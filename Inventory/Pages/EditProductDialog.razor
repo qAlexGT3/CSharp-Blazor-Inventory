@@ -1,0 +1,77 @@
+﻿@using Inventory.Data.Models;
+
+<MudDialog>
+    <DialogContent>
+        @if (ToUpdateProduct != null)
+        {
+            <MudTextField @bind-Value="ToUpdateProduct.Name" Label="Name" Variant="Variant.Text"></MudTextField>
+            <MudTextField @bind-Value="ToUpdateProduct.PartNumber" Label="Part Number" Variant="Variant.Text"></MudTextField>
+            <MudNumericField HideSpinButtons="true" @bind-Value="ToUpdateProduct.SellPrice" Label="Sell Price" Variant="Variant.Text" />
+            <MudNumericField HideSpinButtons="true" @bind-Value="ToUpdateProduct.BuyPrice" Label="Buy Price" Variant="Variant.Text" />
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Submit">Ok</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@inject ISnackbar Snackbar
+
+@code
+{
+    [CascadingParameter] MudDialogInstance? MudDialog { get; set; }
+
+    [Parameter] public Product? ToUpdateProduct { get; set; }
+
+    void Cancel()
+    {
+        if (MudDialog != null)
+        {
+            MudDialog.Cancel();
+        }
+    }
+
+    void Submit()
+    {
+        if (ToUpdateProduct == null)
+        {
+            Snackbar.Add("Internal error.", Severity.Error);
+
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(ToUpdateProduct.Name))
+        {
+            Snackbar.Add("Name missing.", Severity.Error);
+
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(ToUpdateProduct.PartNumber))
+        {
+            Snackbar.Add("Part Number missing.", Severity.Error);
+
+            return;
+        }
+
+        if (ToUpdateProduct.SellPrice <= 0)
+        {
+            Snackbar.Add("Sell Price missing.", Severity.Error);
+
+            return;
+        }
+
+        if (ToUpdateProduct.BuyPrice <= 0)
+        {
+            Snackbar.Add("Buy Price missing.", Severity.Error);
+
+            return;
+        }
+
+        if (MudDialog != null)
+        {
+            MudDialog.Close(DialogResult.Ok(ToUpdateProduct));
+        }
+    }
+}

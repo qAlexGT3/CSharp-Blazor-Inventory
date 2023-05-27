@@ -1,0 +1,144 @@
+﻿@using Inventory.Data.Models;
+
+<MudDialog>
+    <DialogContent>
+        <MudSelect T="int" Label="Type" AnchorOrigin="Origin.BottomCenter" @bind-Value="actiontype">
+            <MudSelectItem Value=1>Plus</MudSelectItem>
+            <MudSelectItem Value=2>Minus</MudSelectItem>
+        </MudSelect>
+
+        <MudNumericField HideSpinButtons="true" @bind-Value="TempQuantity" Label="Quantity" Variant="Variant.Text" />
+
+        @if(ToUpdateRegister != null)
+        {            
+            <MudSelect T="int" @bind-Value="ToUpdateRegister.LocationId" Label="Location" AnchorOrigin="Origin.BottomCenter">
+                @if (Locations != null)
+                {
+                    @foreach (var l in Locations)
+                    {
+                        if(l.Disabled != true)
+                        {
+                            <MudSelectItem Value=@l.Id>@l.LocationName</MudSelectItem>
+                        }
+                    }
+                }
+            </MudSelect>
+
+            <MudSelect T="int" @bind-Value="ToUpdateRegister.ProductId" Label="Product" AnchorOrigin="Origin.BottomCenter">
+                @if (Products != null)
+                {
+                    @foreach (var p in Products)
+                    {
+                        <MudSelectItem Value=@p.Id>@p.Name</MudSelectItem>
+                    }
+                }
+            </MudSelect>
+        }
+
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Submit">Ok</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@inject ISnackbar Snackbar
+
+@code
+{
+    [CascadingParameter] MudDialogInstance? MudDialog { get; set; }
+
+    [Parameter] public List<Location>? Locations { get; set; }
+    [Parameter] public List<Product>? Products { get; set; }
+    [Parameter] public Register? ToUpdateRegister { get; set; }
+
+    public int TempQuantity { get; set; }
+
+    public int actiontype = 0;
+
+    protected override void OnInitialized()
+    {     
+        if(ToUpdateRegister != null && Locations != null)
+        {            
+            if(ToUpdateRegister.Quantity >= 1)
+            {
+                TempQuantity = ToUpdateRegister.Quantity;
+
+                actiontype = 1;
+            }
+            else
+            {
+                TempQuantity = ToUpdateRegister.Quantity * -1;
+
+                actiontype = 2;
+            }
+
+            if(ToUpdateRegister.LocationId != 0)
+            {
+                if(Locations.Where(x=>x.Id == ToUpdateRegister.LocationId).Select(x=>x.Disabled).First())
+                {
+                    ToUpdateRegister.LocationId = 0;
+                }
+            }
+        }
+
+    }
+
+    void Cancel()
+    {
+        if (MudDialog != null)
+        {
+            MudDialog.Cancel();
+        }
+    }
+
+    void Submit()
+    {
+        if (TempQuantity < 1)
+        {
+            Snackbar.Add("Quantity missing.", Severity.Error);
+
+            return;
+        }
+
+        if(ToUpdateRegister != null)
+        {
+
+            if (ToUpdateRegister.LocationId < 1)
+            {
+                Snackbar.Add("Location missing.", Severity.Error);
+
+                return;
+            }
+
+            if (ToUpdateRegister.ProductId < 1)
+            {
+                Snackbar.Add("Product missing.", Severity.Error);
+
+                return;
+            }
+
+            if (actiontype < 1)
+            {
+                Snackbar.Add("Action missing.", Severity.Error);
+
+                return;
+            }
+
+            if (actiontype == 2)
+            {
+                ToUpdateRegister.Quantity = -TempQuantity;
+            }
+            else
+            {
+                ToUpdateRegister.Quantity = TempQuantity;
+            }
+        }
+
+
+        if (MudDialog != null)
+        {
+            MudDialog.Close(DialogResult.Ok(ToUpdateRegister));
+        }
+    }
+}

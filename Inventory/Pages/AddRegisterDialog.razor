@@ -1,0 +1,114 @@
+﻿@using Inventory.Data.Models;
+
+<MudDialog>
+    <DialogContent>
+        <MudSelect T="int" Label="Type" AnchorOrigin="Origin.BottomCenter" @bind-Value="actiontype">
+            <MudSelectItem Value=1>Plus</MudSelectItem>
+            <MudSelectItem Value=2>Minus</MudSelectItem>
+        </MudSelect>
+
+        <MudNumericField HideSpinButtons="true" @bind-Value="newRegister.Quantity" Label="Quantity" Variant="Variant.Text" />
+
+        <MudSelect T="int" @bind-Value="newRegister.LocationId" Label="Location" AnchorOrigin="Origin.BottomCenter">
+            @if(Locations != null)
+            {                
+                foreach(var l in Locations)
+                {
+                    if(l.Disabled != true)
+                    {
+                        <MudSelectItem Value=@l.Id>@l.LocationName</MudSelectItem>
+                    }
+                }
+            }
+        </MudSelect>
+
+        <MudSelect T="int" @bind-Value="newRegister.ProductId" Label="Product" AnchorOrigin="Origin.BottomCenter">
+            @if (Products != null)
+            {
+                @foreach (var p in Products)
+                {
+                    <MudSelectItem Value=@p.Id>@p.Name</MudSelectItem>
+                }
+            }
+        </MudSelect>
+
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Submit">Ok</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@inject ISnackbar Snackbar
+
+@code
+{
+    [CascadingParameter] MudDialogInstance? MudDialog { get; set; }
+
+    [Parameter] public List<Location>? Locations { get; set; }
+    [Parameter] public List<Product>? Products { get; set; }
+    [Parameter] public List<Register>? Registers { get; set; }
+
+    Register newRegister = new();
+
+    public int actiontype = 0;
+
+    void Cancel()
+    {
+        if (MudDialog != null)
+        {
+            MudDialog.Cancel();
+        }
+    }
+
+    void Submit()
+    {
+        if(newRegister.Quantity < 1)
+        {
+            Snackbar.Add("Quantity missing.", Severity.Error);
+
+            return;
+        }
+
+        if(newRegister.LocationId < 1)
+        {
+            Snackbar.Add("Location missing.", Severity.Error);
+
+            return;
+        }
+
+        if (newRegister.ProductId < 1)
+        {
+            Snackbar.Add("Product missing.", Severity.Error);
+
+            return;
+        }
+
+        if(actiontype < 1)
+        {
+            Snackbar.Add("Action missing.", Severity.Error);
+
+            return;
+        }
+
+        if(actiontype == 2)
+        {
+            if(Registers != null)
+            {                
+                if (Registers.Where(x => x.ProductId == newRegister.ProductId && x.LocationId == newRegister.LocationId).Select(x => x.Quantity).Sum() - newRegister.Quantity < 0)
+                {
+                    Snackbar.Add("You don't have this amount in stock.", Severity.Error);
+
+                    return;
+                }
+            }
+
+            newRegister.Quantity = -newRegister.Quantity;
+        }
+
+        if (MudDialog != null)
+        {
+            MudDialog.Close(DialogResult.Ok(newRegister));
+        }
+    }
+}

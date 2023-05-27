@@ -1,0 +1,153 @@
+﻿@page "/locations"
+
+<PageTitle>Locations</PageTitle>
+
+<h3>Locations</h3>
+
+@using Inventory.Data.Database
+@using System.Diagnostics;
+@using Inventory.Data.Models;
+@inject DatabaseService DbService
+
+@inject IDialogService DialogService
+
+@inject ISnackbar SnackBar
+
+<MudButton @onclick="OpenAddDialog" Variant="Variant.Filled" Color="Color.Primary">Add location</MudButton>
+
+<MudDataGrid Items="@locations.Where(x => x.Disabled != true)">
+    <Columns>
+        <PropertyColumn Property="x => x.Id" />
+        <PropertyColumn Property="x => x.LocationName" />
+        <TemplateColumn CellClass="d-flex justify-end">
+            <CellTemplate>
+                <MudStack Row>
+                    <MudButton @onclick="() => OpenEditDialog(context.Item)" Size="@Size.Small" Variant="@Variant.Filled" Color="@Color.Primary">Edit</MudButton>
+                    <MudButton @onclick="() => OpenDeleteDialog(context.Item)" Size="@Size.Small" Variant="@Variant.Filled" Color="@Color.Error">Delete</MudButton>
+                </MudStack>
+            </CellTemplate>
+        </TemplateColumn>
+    </Columns>
+</MudDataGrid>
+
+@code
+{
+    List<Location> locations = new();
+
+    private async Task LoadLocations()
+    {
+        var tmp = await DbService.LoadLocations();
+
+        if(!string.IsNullOrWhiteSpace(tmp.error))
+        {
+            Debug.WriteLine(tmp.error);
+        }
+        else
+        {
+            locations = tmp.Locations.ToList();
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadLocations();
+    }
+
+    private async void OpenAddDialog()
+    {
+        var options = new DialogOptions { CloseOnEscapeKey = true };
+        var tmp = DialogService.Show<AddLocationDialog>("Add location", options);
+
+        var result = await tmp.Result;
+
+        if (!result.Canceled)
+        {
+            Location newLocation = (Location)result.Data;
+
+            var tmpinsert = await DbService.InsertLocation(newLocation);
+
+            if (!string.IsNullOrWhiteSpace(tmpinsert))
+            {
+                Debug.WriteLine(tmpinsert);
+
+                SnackBar.Add("Internal error.", Severity.Error);
+            }
+            else
+            {
+                SnackBar.Add("Location added.", Severity.Success);
+
+                await LoadLocations();
+
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+    }
+
+    private async void OpenEditDialog(Location ToUpdateLocation)
+    {
+        var options = new DialogOptions { CloseOnEscapeKey = true };
+
+        var parameters = new DialogParameters();
+        parameters.Add("ToUpdateLocation", ToUpdateLocation);
+
+        var tmp = DialogService.Show<EditLocationDialog>("Update location", parameters, options);
+
+        var result = await tmp.Result;
+
+        if (!result.Canceled)
+        {
+            Location newLocation = (Location)result.Data;
+
+            var tmpinsert = await DbService.UpdateLocation(newLocation);
+
+            if (!string.IsNullOrWhiteSpace(tmpinsert))
+            {
+                Debug.WriteLine(tmpinsert);
+
+                SnackBar.Add("Internal error.", Severity.Error);
+            }
+            else
+            {
+                SnackBar.Add("Location updated.", Severity.Success);
+
+                await LoadLocations();
+
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+    }
+
+    private async void OpenDeleteDialog(Location ToDeleteLocation)
+    {
+        var options = new DialogOptions { CloseOnEscapeKey = true };
+
+        var parameters = new DialogParameters();
+        parameters.Add("ToDeleteLocation", ToDeleteLocation);
+
+        var tmp = DialogService.Show<DeleteLocationDialog>("Delete location", parameters, options);
+
+        var result = await tmp.Result;
+
+        if (!result.Canceled)
+        {
+            ToDeleteLocation.Disabled = true;
+
+            var tmpinsert = await DbService.UpdateLocation(ToDeleteLocation);
+
+            if (!string.IsNullOrWhiteSpace(tmpinsert))
+            {
+                Debug.WriteLine(tmpinsert);
+
+                SnackBar.Add("Internal error.", Severity.Error);
+            }
+            else
+            {
+                SnackBar.Add("Location deleted.", Severity.Success);
+
+                await LoadLocations();
+
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+    }
+}

@@ -1,0 +1,49 @@
+﻿@using Inventory.Data.Models;
+
+<MudDialog>
+    <DialogContent>
+        @if(ToAddLocation != null)
+        {            
+            <MudTextField @bind-Value="ToAddLocation.LocationName" Label="Location name" Variant="Variant.Text"></MudTextField>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Submit">Ok</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@inject ISnackbar SnackBar
+
+@code
+{
+    [CascadingParameter] MudDialogInstance? MudDialog { get; set; }
+
+    public Location? ToAddLocation = new();
+
+    void Cancel()
+    {
+        if(MudDialog != null)
+        {
+            MudDialog.Cancel();
+        }
+    }
+
+    void Submit()
+    {
+        if(ToAddLocation != null)
+        {            
+            if (string.IsNullOrWhiteSpace(ToAddLocation.LocationName))
+            {
+                SnackBar.Add("Location name missing.", Severity.Error);
+
+                return;
+            }
+
+            if(MudDialog != null)
+            {
+                MudDialog.Close(DialogResult.Ok(ToAddLocation));
+            }
+        }
+    }
+}

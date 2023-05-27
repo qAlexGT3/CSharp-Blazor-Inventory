@@ -1,0 +1,179 @@
+﻿@page "/statistics"
+
+<PageTitle>Statistics</PageTitle>
+
+@using Inventory.Data.Database
+@using System.Diagnostics;
+@using Inventory.Data.Models;
+@inject DatabaseService DbService
+
+@inject IDialogService DialogService
+
+@inject ISnackbar SnackBar
+
+<h3>Statistics</h3>
+
+@if(Loaded != false)
+{
+    <MudSelect T="int" Label="Location" AnchorOrigin="Origin.BottomCenter" @bind-Value="SelectedDepositId" Variant="Variant.Filled">
+        <MudSelectItem Value = "0">Total</MudSelectItem>
+        @foreach(var l in locations)
+        {
+            <MudSelectItem Value="l.Id">@l.LocationName</MudSelectItem>
+        }
+    </MudSelect>
+
+    @if (SelectedDepositId != 0)
+    {        
+        <MudDataGrid Items="@products">
+
+            <Columns>
+
+                <PropertyColumn Property="x => x.Name" />
+
+                <PropertyColumn Property="x=>registers.Where(r => r.Quantity < 0 && r.ProductId == x.Id && r.LocationId == SelectedDepositId).Select(x => x.Quantity).Sum() * -1" Title="Sells" />
+
+                <PropertyColumn Property="x=>registers.Where(r => r.Quantity > 0 && r.ProductId == x.Id && r.LocationId == SelectedDepositId).Select(x => x.Quantity).Sum()" Title="Buys" />
+
+                <PropertyColumn Property="x=>products.Where(p=>p.Id == x.Id).Select(p=>p.SellPrice).First()" Title="Sell price" />
+
+                <PropertyColumn Property="x=>products.Where(p=>p.Id == x.Id).Select(p=>p.BuyPrice).First()" Title="Buy price" />
+
+                <PropertyColumn Property="@(x=>ProfitPerProduct(x, 1))" Title="Profit" />
+            
+            </Columns>
+
+        </MudDataGrid>
+    }
+    else
+    {
+        <MudDataGrid Items="@products">
+
+            <Columns>
+
+                <PropertyColumn Property="x => x.Name" />
+
+                <PropertyColumn Property="x=>registers.Where(r => r.Quantity < 0 && r.ProductId == x.Id).Select(x => x.Quantity).Sum() * -1" Title="Sells" />
+
+                <PropertyColumn Property="x=>registers.Where(r => r.Quantity > 0 && r.ProductId == x.Id).Select(x => x.Quantity).Sum()" Title="Buys" />
+
+                <PropertyColumn Property="x=>products.Where(p=>p.Id == x.Id).Select(p=>p.SellPrice).First()" Title="Sell price" />
+
+                <PropertyColumn Property="x=>products.Where(p=>p.Id == x.Id).Select(p=>p.BuyPrice).First()" Title="Buy price" />
+
+                <PropertyColumn Property="@(x=>ProfitPerProduct(x, 2))" Title ="Profit"/>
+
+            </Columns>
+
+        </MudDataGrid>
+    }
+}
+
+@code
+{
+    public bool Loaded = false;
+
+    public int SelectedDepositId = 0;
+
+    List<Register> registers = new();
+    List<Location> locations = new();
+    List<Product> products = new();
+
+    private string? ValoareStoc(Product x, int type)
+    {
+        string? tot = null;
+
+        switch(type)
+        {
+            case 1:
+                tot = (registers.Where(r => r.ProductId == x.Id && r.LocationId == SelectedDepositId).Select(x => x.Quantity).Sum() * x.SellPrice).ToString("N2");
+                break;
+
+            case 2:
+                tot = (registers.Where(r => r.ProductId == x.Id).Select(x => x.Quantity).Sum() * x.SellPrice).ToString("N2");
+                break;
+        }
+
+
+        return tot;
+    }
+
+    private async Task LoadRegisters()
+    {
+        var tmp = await DbService.SelectRegisters();
+
+        if (tmp.error != null)
+        {
+            Debug.WriteLine(tmp.error);
+        }
+        else
+        {
+            registers = tmp.registers;
+        }
+    }
+
+    private async Task LoadLocations()
+    {
+        var tmp = await DbService.LoadLocations();
+
+        if (tmp.error != null)
+        {
+            Debug.Write(tmp.error);
+        }
+        else
+        {
+            locations = tmp.Locations;
+        }
+    }
+
+    private async Task LoadProducts()
+    {
+        var tmp = await DbService.SelectProducts();
+
+        if (tmp.error != null)
+        {
+            Debug.Write(tmp.error);
+        }
+        else
+        {
+            products = tmp.products;
+        }
+    }
+
+    private string? ProfitPerProduct(Product x, int type)
+    {
+        int TotalCumparari = 0;
+        int TotalVanzari = 0;
+
+        switch(type)
+        {
+            case 1:
+                TotalCumparari = (registers.Where(r => r.Quantity > 0 && r.ProductId == x.Id && r.LocationId == SelectedDepositId).Select(x => x.Quantity).Sum());
+                TotalVanzari = (registers.Where(r => r.Quantity < 0 && r.ProductId == x.Id && r.LocationId == SelectedDepositId).Select(x => x.Quantity).Sum() * -1);
+                break;
+
+            case 2:
+                TotalCumparari = (registers.Where(r => r.Quantity > 0 && r.ProductId == x.Id).Select(x => x.Quantity).Sum());
+                TotalVanzari = (registers.Where(r => r.Quantity < 0 && r.ProductId == x.Id).Select(x => x.Quantity).Sum() * -1);
+                break;
+        }
+
+        var BaniInCumparare = TotalVanzari * x.BuyPrice;
+        var BaniDinVanzare = TotalVanzari * x.SellPrice;
+
+        var Profit = BaniDinVanzare - BaniInCumparare;
+
+        return Profit.ToString("N2");
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadRegisters();
+
+        await LoadLocations();
+
+        await LoadProducts();
+
+        Loaded = true;
+    }
+}

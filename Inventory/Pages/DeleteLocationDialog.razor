@@ -1,0 +1,41 @@
+﻿@using Inventory.Data.Models;
+
+<MudDialog>
+    <DialogContent>
+        @if (ToDeleteLocation != null)
+        {
+            <span>
+                Do you want to delete '@ToDeleteLocation.LocationName'?
+            </span>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Submit">Ok</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@inject ISnackbar Snackbar
+
+@code
+{
+    [CascadingParameter] MudDialogInstance? MudDialog { get; set; }
+
+    [Parameter] public Location? ToDeleteLocation { get; set; }
+
+    void Cancel()
+    {
+        if (MudDialog != null)
+        {
+            MudDialog.Cancel();
+        }
+    }
+
+    void Submit()
+    {
+        if (MudDialog != null)
+        {
+            MudDialog.Close(DialogResult.Ok(true));
+        }
+    }
+}

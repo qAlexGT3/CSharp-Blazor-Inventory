@@ -1,0 +1,195 @@
+﻿@page "/registers"
+
+<PageTitle>Registers</PageTitle>
+
+<h3>Registers</h3>
+
+@using Inventory.Data.Database
+@using System.Diagnostics;
+@using Inventory.Data.Models;
+@inject DatabaseService DbService
+
+@inject IDialogService DialogService
+
+@inject ISnackbar SnackBar
+
+<MudButton @onclick="OpenAddDialog" Variant="Variant.Filled" Color="Color.Primary">Add register</MudButton>
+
+<MudDataGrid Items="@registers">
+    <Columns>
+        <PropertyColumn Property="x => x.Id" />
+        <PropertyColumn Property="x => x.Quantity" />
+        <PropertyColumn Property="x => x.ProductName" />
+        <PropertyColumn Property="x => x.LocationName" />
+        <TemplateColumn CellClass="d-flex justify-end">
+            <CellTemplate>
+                <MudStack Row>
+                    <MudButton @onclick="() => OpenEditDialog(context.Item)" Size="@Size.Small" Variant="@Variant.Filled" Color="@Color.Primary">Edit</MudButton>
+                    <MudButton @onclick="() => OpenDeleteDialog(context.Item)" Size="@Size.Small" Variant="@Variant.Filled" Color="@Color.Error">Delete</MudButton>
+                </MudStack>
+            </CellTemplate>
+        </TemplateColumn>
+    </Columns>
+</MudDataGrid>
+
+@code
+{
+    List<Register> registers = new();
+    List<Location> locations = new();
+    List<Product> products = new();
+
+    private async Task LoadRegisters()
+    {
+        var tmp = await DbService.SelectRegisters();
+
+        if (tmp.error != null)
+        {
+            Debug.WriteLine(tmp.error);
+        }
+        else
+        {
+            registers = tmp.registers;
+        }
+    }
+
+    private async Task LoadLocations()
+    {
+        var tmp = await DbService.LoadLocations();
+
+        if(tmp.error != null)
+        {
+            Debug.Write(tmp.error);
+        }
+        else
+        {
+            locations = tmp.Locations;
+        }
+    }
+
+    private async Task LoadProducts()
+    {
+        var tmp = await DbService.SelectProducts();
+
+        if (tmp.error != null)
+        {
+            Debug.Write(tmp.error);
+        }
+        else
+        {
+            products = tmp.products;
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadRegisters();
+
+        await LoadLocations();
+
+        await LoadProducts();
+    }
+
+    private async void OpenAddDialog()
+    {
+        var options = new DialogOptions { CloseOnEscapeKey = true };
+
+        var parameters = new DialogParameters();
+        parameters.Add("Locations", locations);
+        parameters.Add("Products", products);
+        parameters.Add("Registers", registers);
+
+        var tmp = DialogService.Show<AddRegisterDialog>("Add register", parameters, options);
+
+        var result = await tmp.Result;
+
+        if (!result.Canceled)
+        {
+            Register newRegister = (Register)result.Data;
+
+            var tmpinsert = await DbService.InsertRegister(newRegister);
+
+            if (!string.IsNullOrWhiteSpace(tmpinsert))
+            {
+                Debug.WriteLine(tmpinsert);
+
+                SnackBar.Add("Internal error.", Severity.Error);
+            }
+            else
+            {
+                SnackBar.Add("Register added.", Severity.Success);
+
+                await LoadRegisters();
+
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+    }
+
+    private async void OpenDeleteDialog(Register ToDeleteRegister)
+    {
+        var options = new DialogOptions { CloseOnEscapeKey = true };
+
+        var parameters = new DialogParameters();
+        parameters.Add("ToDeleteRegister", ToDeleteRegister);
+
+        var tmp = DialogService.Show<DeleteRegisterDialog>("Delete register", parameters, options);
+
+        var result = await tmp.Result;
+
+        if(!result.Canceled)
+        {
+            var tmpdelete = await DbService.DeleteRegister(ToDeleteRegister.Id);
+
+            if(!string.IsNullOrWhiteSpace(tmpdelete))
+            {
+                Debug.WriteLine(tmpdelete);
+
+                SnackBar.Add("Internal error.", Severity.Error);
+            }
+            else
+            {
+                SnackBar.Add("Register deleted.", Severity.Success);
+
+                await LoadRegisters();
+
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+    }
+
+    private async void OpenEditDialog(Register ToUpdateRegister)
+    {
+        var options = new DialogOptions { CloseOnEscapeKey = true };
+
+        var parameters = new DialogParameters();
+        parameters.Add("ToUpdateRegister", ToUpdateRegister);
+        parameters.Add("Locations", locations);
+        parameters.Add("Products", products);
+
+        var tmp = DialogService.Show<EditRegisterDialog>("Update register", parameters, options);
+
+        var result = await tmp.Result;
+
+        if (!result.Canceled)
+        {
+            Register newRegister = (Register)result.Data;
+
+            var tmpinsert = await DbService.UpdateRegister(newRegister);
+
+            if (!string.IsNullOrWhiteSpace(tmpinsert))
+            {
+                Debug.WriteLine(tmpinsert);
+
+                SnackBar.Add("Internal error.", Severity.Error);
+            }
+            else
+            {
+                SnackBar.Add("Register updated.", Severity.Success);
+
+                await LoadRegisters();
+
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+    }
+}
