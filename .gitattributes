@@ -2,3 +2,4 @@
 *.css linguist-detectable=false
 *.json linguist-detectable=false
 *.cshtml linguist-detectable=false
+*.razor linguist-detectable=false
